@@ -1,0 +1,96 @@
+rules_version = '2';
+
+/* ============================================================
+   DENNER BARBEARIA — Regras de segurança do Firestore
+   ------------------------------------------------------------
+   Como aplicar:
+   1) Firebase Console > Firestore Database > Regras
+   2) Cole o conteúdo deste arquivo e clique em "Publicar"
+   (ou use a Firebase CLI: firebase deploy --only firestore:rules)
+
+   Papéis:
+   - Documento em /admins/{uid}  → esse uid é administrador
+   - Documento em /barbers/{uid} → esse uid é o login de um barbeiro
+     (o ID do documento É o UID do barbeiro no Firebase Auth)
+   - Qualquer outro usuário autenticado (anônimo) é um CLIENTE
+   ============================================================ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function isBarber() {
+      return isSignedIn() && exists(/databases/$(database)/documents/barbers/$(request.auth.uid));
+    }
+    function onlyFieldsChanged(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    /* --- papéis --- */
+    match /admins/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false; // criado manualmente pelo Firebase Console
+    }
+    match /barbers/{uid} {
+      allow read: if true; // lista pública de barbeiros ativos
+      allow write: if isAdmin();
+    }
+    match /users/{uid} {
+      allow read, write: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+    }
+    match /clients/{uid} {
+      allow read, write: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+    }
+
+    /* --- catálogo público (serviços, fotos, config, agenda) --- */
+    match /services/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /gallery/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /businessSettings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /blockedTimes/{id} {
+      allow read: if true; // necessário p/ calcular horários disponíveis
+      allow write: if isAdmin();
+    }
+    match /daysOff/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    /* --- agendamentos --- */
+    match /appointments/{id} {
+      allow create: if isAdmin() ||
+        (isSignedIn() && request.resource.data.clientUid == request.auth.uid);
+
+      allow read: if isAdmin() ||
+        (isSignedIn() && resource.data.clientUid == request.auth.uid) ||
+        (isBarber() && resource.data.barberId == request.auth.uid);
+
+      allow update: if isAdmin() ||
+        // cliente só pode cancelar o próprio agendamento
+        (isSignedIn() && resource.data.clientUid == request.auth.uid &&
+          request.resource.data.status == 'cancelled' && onlyFieldsChanged(['status'])) ||
+        // barbeiro só pode concluir/cancelar os próprios atendimentos
+        (isBarber() && resource.data.barberId == request.auth.uid &&
+          request.resource.data.status in ['completed','cancelled'] && onlyFieldsChanged(['status']));
+
+      allow delete: if isAdmin();
+    }
+
+    /* --- notificações (estrutura preparada para uso futuro) --- */
+    match /notifications/{id} {
+      allow read: if isAdmin() || (isBarber() && resource.data.barberId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+  }
+}

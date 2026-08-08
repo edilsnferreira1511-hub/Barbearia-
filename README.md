@@ -1,0 +1,133 @@
+# Denner Barbearia — Sistema de Agendamento
+
+Site mobile-first (HTML + CSS + JavaScript puro) com backend em Firebase
+(Authentication + Firestore + Storage). Três áreas: **Cliente** (`index.html`),
+**Painel Admin** (`admin.html`) e **Painel do Barbeiro** (`barbeiro.html`).
+
+Nenhuma etapa aqui exige linha de comando — tudo é feito pelo navegador,
+no Firebase Console e no GitHub.
+
+---
+
+## 1. Projeto Firebase
+
+✅ Já conectado ao projeto **barbearia-b244b** — as chaves já estão em
+`firebase-config.js`, não precisa mexer nisso.
+
+Falta ativar os serviços (gratuito, plano Spark):
+
+1. Acesse [console.firebase.google.com](https://console.firebase.google.com) → abra o projeto **barbearia-b244b**.
+2. **Build → Authentication → Get started**.
+   - Aba "Sign-in method" → ative **E-mail/senha**.
+   - Ative também **Anônimo** (é como os clientes usam "Meus agendamentos" sem precisar criar conta).
+3. **Build → Firestore Database → Create database** → modo **produção** → escolha a região mais próxima (ex: `southamerica-east1`).
+4. **Build → Storage → Get started** (usado para as fotos de barbeiros, serviços e galeria).
+
+## 2. (já feito) Conectar o código ao seu projeto
+
+Isso já está pronto em `firebase-config.js` — pule para o passo 3.
+
+## 3. Publicar as regras de segurança
+
+1. **Firestore Database → Regras** → apague o conteúdo → cole o conteúdo de `firestore.rules` → **Publicar**.
+2. **Storage → Regras** → cole o conteúdo de `storage.rules` → **Publicar**.
+
+## 4. Criar o acesso do Administrador (o "PIN")
+
+O PIN do admin é, na prática, a senha de um usuário de e-mail/senha fixo:
+
+1. **Authentication → Users → Add user**.
+2. E-mail: `admin@dennerbarbearia.internal` (o mesmo valor da constante `ADMIN_INTERNAL_EMAIL` em `firebase-config.js` — troque os dois juntos se quiser outro e-mail).
+3. Senha: o PIN que você quer usar (ex: `278431`). Essa senha É o PIN digitado no app.
+4. Copie o **UID** gerado para esse usuário.
+5. **Firestore Database → Iniciar coleção** → ID da coleção: `admins` → ID do documento: **cole o UID copiado** → adicione um campo qualquer, ex: `name: "Administrador"` → Salvar.
+
+Pronto: agora o ícone de estrela no app e a tela `admin.html` aceitam esse PIN.
+
+## 5. Popular dados iniciais (serviços e horários)
+
+1. Abra `admin.html` no navegador (localmente ou já publicado) e entre com o PIN.
+2. Abra o Console do navegador (F12) → cole o conteúdo de `seed.js` → Enter.
+3. Isso cria os 4 serviços iniciais e os horários de funcionamento padrão.
+   Depois disso, ajuste tudo pela própria aba **Configurações** e **Serviços** do painel.
+
+## 6. Cadastrar os barbeiros
+
+Como criar contas de outros usuários exige um servidor administrativo
+(fora do escopo de um site 100% estático), o fluxo é:
+
+1. **Authentication → Add user** → crie um e-mail/senha para o barbeiro (esse e-mail é o "login" que ele vai digitar em `barbeiro.html`).
+2. Copie o UID gerado.
+3. No painel admin → aba **Barbeiros** → **Novo Barbeiro** → cole esse UID no campo "UID de login", preencha nome/foto/telefone → Salvar.
+
+O barbeiro agora consegue entrar em `barbeiro.html` e só enxerga a própria agenda.
+
+## 7. Trocar a logo e as fotos reais
+
+- Logo padrão: `logo.svg` (é só um placeholder — pode trocar o arquivo ou, mais fácil, colar a URL da logo real em **Painel Admin → Configurações → Logo**).
+- Foto de capa (fachada), fotos dos serviços, dos barbeiros e da galeria: tudo é enviado direto pelo painel admin (usa o Firebase Storage). Não precisa mexer em código.
+
+## 8. Publicar no GitHub Pages (pelo celular)
+
+Todos os arquivos ficam soltos, sem pastas — é só selecionar tudo de uma vez:
+
+1. No app ou site do GitHub, crie um repositório novo (ex: `denner-barbearia`) — pode marcar como **Public**.
+2. Abra o repositório → toque em **Add file → Upload files**.
+3. Toque em "escolher seus arquivos", navegue até a pasta onde estão os arquivos deste projeto no seu celular e **selecione todos de uma vez** (toque e segure no primeiro, depois toque nos outros para marcar vários — ou use "Selecionar tudo" do gerenciador de arquivos).
+4. Envie. Como não há nenhuma subpasta, o GitHub aceita tudo junto, sem erro.
+5. Role até "Commit changes" → toque em **Commit changes** para confirmar.
+6. Vá em **Settings → Pages** → em "Source" escolha a branch `main` e a pasta `/ (root)` → **Save**.
+7. Em alguns minutos o site estará em `https://SEU-USUARIO.github.io/SEU-REPOSITORIO/`.
+8. Volte no Firebase: **Authentication → Settings → Authorized domains → Add domain** → adicione esse domínio do GitHub Pages (senão o login trava por segurança).
+
+---
+
+## Estrutura de dados (Firestore)
+
+| Coleção | Descrição |
+|---|---|
+| `services` | serviços (nome, preço, duração, foto, ativo) |
+| `barbers` | barbeiros — **ID do documento = UID do login no Auth** |
+| `appointments` | agendamentos (cliente, serviço, barbeiro, data, hora, status) |
+| `businessSettings/general` | nome, contatos, endereço, redes sociais, horário de funcionamento |
+| `blockedTimes` | bloqueios pontuais (dia inteiro ou intervalo) |
+| `daysOff` | folgas fixas (dia da semana) ou pontuais (data) de cada barbeiro |
+| `gallery` | fotos da galeria/home/sobre |
+| `admins` | UIDs com acesso ao painel administrativo |
+| `clients` | nome/telefone salvos de cada cliente (perfil) |
+| `notifications` | estrutura pronta para uso futuro (lembretes, etc.) |
+
+## O que foi simplificado nesta primeira versão
+
+- **WhatsApp**: o botão "Confirmar no WhatsApp" abre uma conversa já com a
+  mensagem pronta (`wa.me`). Não é um envio automático via API — para isso
+  seria necessário o WhatsApp Business API (serviço pago à parte).
+- **Criação de login de barbeiro/admin**: feita manualmente pelo Firebase
+  Console (não existe um servidor próprio criando contas). Para automatizar
+  isso completamente no futuro, dá para adicionar o **Firebase Functions**
+  (plano Blaze) e um formulário que cria o usuário via Admin SDK.
+- **Conflito de horário**: o sistema revalida no momento da confirmação
+  (evita a maioria das corridas entre dois clientes agendando ao mesmo
+  tempo), mas uma garantia 100% atômica exigiria uma Cloud Function/transação
+  no servidor.
+- As regras de `storage.rules` usam `firestore.exists()` — teste no
+  simulador do Firebase Console após publicar; é um recurso mais novo do
+  Storage e pode variar conforme a configuração do projeto.
+
+## Índices do Firestore (importante)
+
+Algumas buscas do app combinam mais de um filtro (ex: barbeiro + data +
+status, ou "ativo" + ordenar por posição). O Firestore exige um **índice
+composto** para esse tipo de busca. Você não precisa criar nada na mão:
+na primeira vez que uma dessas buscas rodar, vai aparecer um erro no
+Console do navegador (F12) do tipo *"The query requires an index"* com um
+**link azul** — clique nele, confirme em "Criar índice" no Firebase Console,
+espere ~1 minuto e recarregue a página. Isso só acontece uma vez por tipo
+de busca.
+
+## Testando localmente antes de publicar
+
+Não dá para abrir `index.html` direto com duplo clique (o navegador bloqueia
+alguns recursos por segurança). Rode um servidor local simples, por exemplo:
+- VS Code → extensão "Live Server" → botão direito em `index.html` → "Open with Live Server", ou
+- Python: `python3 -m http.server 8000` na pasta do projeto e acesse `http://localhost:8000`.

@@ -1,7 +1,7 @@
 # Denner Barbearia — Sistema de Agendamento
 
 Site mobile-first (HTML + CSS + JavaScript puro) com backend em Firebase
-(Authentication + Firestore + Storage). Três áreas: **Cliente** (`index.html`),
+(Authentication + Firestore). Três áreas: **Cliente** (`index.html`),
 **Painel Admin** (`admin.html`) e **Painel do Barbeiro** (`barbeiro.html`).
 
 Nenhuma etapa aqui exige linha de comando — tudo é feito pelo navegador,
@@ -21,7 +21,8 @@ Falta ativar os serviços (gratuito, plano Spark):
    - Aba "Sign-in method" → ative **E-mail/senha**.
    - Ative também **Anônimo** (é como os clientes usam "Meus agendamentos" sem precisar criar conta).
 3. **Build → Firestore Database → Create database** → modo **produção** → escolha a região mais próxima (ex: `southamerica-east1`).
-4. **Build → Storage → Get started** (usado para as fotos de barbeiros, serviços e galeria).
+
+> **Sobre fotos**: este projeto usa **link de imagem** (cole a URL de uma foto) em vez de upload de arquivo — assim você não precisa ativar o Firebase Storage nem cadastrar cartão. Veja a seção "Fotos" mais abaixo.
 
 ## 2. (já feito) Conectar o código ao seu projeto
 
@@ -30,7 +31,6 @@ Isso já está pronto em `firebase-config.js` — pule para o passo 3.
 ## 3. Publicar as regras de segurança
 
 1. **Firestore Database → Regras** → apague o conteúdo → cole o conteúdo de `firestore.rules` → **Publicar**.
-2. **Storage → Regras** → cole o conteúdo de `storage.rules` → **Publicar**.
 
 ## 4. Criar o acesso do Administrador (o "PIN")
 
@@ -62,10 +62,21 @@ Como criar contas de outros usuários exige um servidor administrativo
 
 O barbeiro agora consegue entrar em `barbeiro.html` e só enxerga a própria agenda.
 
-## 7. Trocar a logo e as fotos reais
+## 7. Ativar upload de fotos (ImgBB — grátis, sem cartão)
 
-- Logo padrão: `logo.svg` (é só um placeholder — pode trocar o arquivo ou, mais fácil, colar a URL da logo real em **Painel Admin → Configurações → Logo**).
-- Foto de capa (fachada), fotos dos serviços, dos barbeiros e da galeria: tudo é enviado direto pelo painel admin (usa o Firebase Storage). Não precisa mexer em código.
+Fotos (logo, capa, barbeiros, serviços, galeria) são enviadas direto do
+celular, mas guardadas usando o **ImgBB**, um serviço gratuito de
+hospedagem de imagens — assim você não precisa do Firebase Storage nem
+cadastrar cartão em lugar nenhum.
+
+1. Acesse **api.imgbb.com** no navegador
+2. Crie uma conta grátis (ou entre com Google) — não pede cartão
+3. Na página, copie a **API Key**
+4. Abra `firebase-config.js` → substitua `COLE_SUA_CHAVE_IMGBB_AQUI` pela chave copiada
+5. Suba esse arquivo atualizado pro GitHub (substituindo o antigo)
+
+Depois disso, em qualquer lugar do painel admin que peça foto, é só tocar,
+escolher a foto do celular e pronto — o link é gerado sozinho.
 
 ## 8. Publicar no GitHub Pages (pelo celular)
 
@@ -110,9 +121,10 @@ Todos os arquivos ficam soltos, sem pastas — é só selecionar tudo de uma vez
   (evita a maioria das corridas entre dois clientes agendando ao mesmo
   tempo), mas uma garantia 100% atômica exigiria uma Cloud Function/transação
   no servidor.
-- As regras de `storage.rules` usam `firestore.exists()` — teste no
-  simulador do Firebase Console após publicar; é um recurso mais novo do
-  Storage e pode variar conforme a configuração do projeto.
+- **Fotos via ImgBB**: simples e sem custo, mas depende de um serviço
+  externo — se um dia quiser trazer as fotos totalmente para dentro do seu
+  próprio projeto Firebase, o arquivo `storage.rules` já vem pronto para
+  quando você migrar para o Firebase Storage (que hoje exige o plano Blaze).
 
 ## Índices do Firestore (importante)
 

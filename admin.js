@@ -274,7 +274,10 @@ document.getElementById('btn-save-barbeiro').onclick = async ()=>{
     let photoUrl = null;
     const existing = A.barbers.find(x=>x.id===uid);
     if(existing) photoUrl = existing.photoUrl || null;
-    if(A.pendingFile.barbeiro) photoUrl = await uploadIfNeeded(A.pendingFile.barbeiro, 'barbers');
+    if(A.pendingFile.barbeiro){
+      btn.textContent = 'ENVIANDO FOTO...';
+      photoUrl = await uploadToImgbb(A.pendingFile.barbeiro);
+    }
     await db.collection('barbers').doc(uid).set({
       name, phone: document.getElementById('barbeiro-telefone').value.trim(),
       active: document.getElementById('barbeiro-ativo').classList.contains('on'),
@@ -282,7 +285,7 @@ document.getElementById('btn-save-barbeiro').onclick = async ()=>{
     }, {merge:true});
     showToast('Barbeiro salvo!','success');
     document.getElementById('modal-barbeiro').classList.add('hidden');
-  }catch(err){ console.error(err); showToast('Erro ao salvar barbeiro.','error'); }
+  }catch(err){ console.error(err); showToast(err.message || 'Erro ao salvar barbeiro.','error'); }
   finally{ btn.disabled=false; btn.textContent='SALVAR'; }
 };
 
@@ -335,7 +338,10 @@ document.getElementById('btn-save-servico').onclick = async ()=>{
   const btn = document.getElementById('btn-save-servico'); btn.disabled = true; btn.textContent='SALVANDO...';
   try{
     let photoUrl = id ? (A.services.find(x=>x.id===id)?.photoUrl||null) : null;
-    if(A.pendingFile.servico) photoUrl = await uploadIfNeeded(A.pendingFile.servico, 'services');
+    if(A.pendingFile.servico){
+      btn.textContent = 'ENVIANDO FOTO...';
+      photoUrl = await uploadToImgbb(A.pendingFile.servico);
+    }
     const payload = {
       name, price, durationMin, description: document.getElementById('servico-descricao').value.trim(),
       active: document.getElementById('servico-ativo').classList.contains('on'),
@@ -346,7 +352,7 @@ document.getElementById('btn-save-servico').onclick = async ()=>{
     else await db.collection('services').add(payload);
     showToast('Serviço salvo!','success');
     document.getElementById('modal-servico').classList.add('hidden');
-  }catch(err){ console.error(err); showToast('Erro ao salvar serviço.','error'); }
+  }catch(err){ console.error(err); showToast(err.message || 'Erro ao salvar serviço.','error'); }
   finally{ btn.disabled=false; btn.textContent='SALVAR'; }
 };
 
@@ -375,11 +381,11 @@ document.getElementById('btn-save-foto').onclick = async ()=>{
   if(!A.pendingFile.foto){ showToast('Escolha uma foto.','error'); return; }
   const btn = document.getElementById('btn-save-foto'); btn.disabled=true; btn.textContent='ENVIANDO...';
   try{
-    const url = await uploadIfNeeded(A.pendingFile.foto, 'gallery');
+    const url = await uploadToImgbb(A.pendingFile.foto);
     await db.collection('gallery').add({ url, section: document.getElementById('foto-secao').value, order: A.gallery.length, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
     showToast('Foto adicionada!','success');
     document.getElementById('modal-foto').classList.add('hidden');
-  }catch(err){ console.error(err); showToast('Erro ao enviar foto.','error'); }
+  }catch(err){ console.error(err); showToast(err.message || 'Erro ao adicionar foto.','error'); }
   finally{ btn.disabled=false; btn.textContent='ADICIONAR'; }
 };
 
@@ -396,6 +402,18 @@ function renderConfigForm(){
   document.getElementById('cfg-facebook').value = b.facebook||'';
   renderHoursForm(b.hours || defaultHours());
 }
+document.getElementById('cfg-logo-file').addEventListener('change', async e=>{
+  const file = e.target.files[0]; if(!file) return;
+  showToast('Enviando foto...','');
+  try{ document.getElementById('cfg-logo').value = await uploadToImgbb(file); showToast('Foto da logo pronta — não esqueça de Salvar.','success'); }
+  catch(err){ showToast(err.message || 'Erro ao enviar foto.','error'); }
+});
+document.getElementById('cfg-cover-file').addEventListener('change', async e=>{
+  const file = e.target.files[0]; if(!file) return;
+  showToast('Enviando foto...','');
+  try{ document.getElementById('cfg-cover').value = await uploadToImgbb(file); showToast('Foto de capa pronta — não esqueça de Salvar.','success'); }
+  catch(err){ showToast(err.message || 'Erro ao enviar foto.','error'); }
+});
 document.getElementById('btn-save-config').onclick = async ()=>{
   const payload = {
     name: document.getElementById('cfg-name').value.trim(),
@@ -518,12 +536,18 @@ function previewFile(file, container){
   reader.onload = ()=> container.insertAdjacentHTML('afterbegin', `<img src="${reader.result}">`);
   reader.readAsDataURL(file);
 }
-async function uploadIfNeeded(file, folder){
-  if(!file) return null;
-  if(!storage){ showToast('Storage do Firebase não configurado.','error'); return null; }
-  const ref = storage.ref().child(`${folder}/${Date.now()}_${file.name}`);
-  await ref.put(file);
-  return await ref.getDownloadURL();
+/* Envia a imagem para o ImgBB (hospedagem gratuita de imagens, sem cartão)
+   e devolve a URL pública. Configure sua chave grátis em firebase-config.js. */
+async function uploadToImgbb(file){
+  if(!IMGBB_API_KEY || IMGBB_API_KEY.includes('COLE_')){
+    throw new Error('Configure a chave do ImgBB em firebase-config.js (veja o README).');
+  }
+  const formData = new FormData();
+  formData.append('image', file);
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method:'POST', body: formData });
+  const data = await res.json();
+  if(!data || !data.success) throw new Error('Falha ao enviar a foto. Tente novamente.');
+  return data.data.url;
 }
 function placeholderImgA(){
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#141b2e"/><text x="50" y="56" font-size="34" text-anchor="middle" fill="#cea23f" font-family="Georgia">D</text></svg>`);

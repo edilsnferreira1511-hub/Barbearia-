@@ -124,3 +124,40 @@ const ICONS = {
   repeat: `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>`,
 };
 function icon(name){ return ICONS[name] || ''; }
+
+/* ---------------- FOTOS DIRETO NO FIRESTORE ----------------
+   Em vez de subir a foto para um serviço externo, a gente redimensiona
+   e comprime ela no próprio celular (usando um <canvas>) e guarda o
+   resultado como texto dentro do documento no Firestore. Fica tudo
+   100% dentro do seu projeto Firebase, sem contas externas e sem
+   precisar do plano pago do Firebase Storage.
+   maxWidth/quality controlam o tamanho final do arquivo. */
+function compressImageToDataUrl(file, maxWidth=600, quality=0.75){
+  return new Promise((resolve, reject)=>{
+    if(!file.type || !file.type.startsWith('image/')){
+      reject(new Error('Escolha um arquivo de imagem (jpg, png, etc).')); return;
+    }
+    const reader = new FileReader();
+    reader.onerror = ()=> reject(new Error('Não foi possível ler o arquivo.'));
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=> reject(new Error('Esse arquivo não é uma imagem válida.'));
+      img.onload = ()=>{
+        let { width, height } = img;
+        if(width > maxWidth){ height = Math.round(height * (maxWidth/width)); width = maxWidth; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+        // o Firestore aceita até ~1MB por documento inteiro; deixamos uma margem segura
+        if(dataUrl.length > 700000){
+          reject(new Error('Essa foto ainda ficou grande demais mesmo comprimida. Tente uma foto mais simples.'));
+          return;
+        }
+        resolve(dataUrl);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}

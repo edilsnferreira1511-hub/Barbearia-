@@ -34,15 +34,7 @@ const storage = (typeof firebase.storage === 'function') ? firebase.storage() : 
 const analytics = (typeof firebase.analytics === 'function') ? firebase.analytics() : null;
 
 // E-mail interno fixo usado apenas para autenticar o PIN do administrador.
-// Você cria esse usuário manualmente uma única vez no Firebase Console
-// (Authentication > Add user) com este e-mail e a senha = o PIN desejado.
+// A conta é criada automaticamente na primeira vez que alguém abre
+// admin.html (tela "Primeiro acesso") — não precisa mexer no Firebase
+// Console pra isso.
 const ADMIN_INTERNAL_EMAIL = "admin@dennerbarbearia.internal";
-
-// Chave gratuita do ImgBB, usada para enviar fotos (barbeiros, serviços,
-// galeria, logo, capa) sem precisar do Firebase Storage nem de cartão.
-// Como conseguir a sua (grátis, 2 minutos, sem cartão):
-// 1) Acesse https://api.imgbb.com/
-// 2) Crie uma conta grátis (ou entre com o Google)
-// 3) Copie a "API Key" que aparece na página
-// 4) Cole no lugar de COLE_SUA_CHAVE_IMGBB_AQUI abaixo
-const IMGBB_API_KEY = "COLE_SUA_CHAVE_IMGBB_AQUI";

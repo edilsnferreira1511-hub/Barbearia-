@@ -100,14 +100,16 @@
       <div class="card card-pad" style="margin-bottom:16px;">
         <div class="field"><label>Nome</label><input id="cfg-name"></div>
         <div class="field"><label>Logo</label>
-          <input id="cfg-logo" placeholder="https://..." readonly>
-          <label class="btn btn-secondary btn-sm btn-block-gap" style="display:block;text-align:center;">ESCOLHER FOTO DA LOGO
+          <input type="hidden" id="cfg-logo">
+          <div class="photo-upload" id="cfg-logo-preview" style="height:90px;margin-bottom:8px;"><span data-icon="camera"></span><span>Nenhuma foto</span></div>
+          <label class="btn btn-secondary btn-sm" style="display:block;text-align:center;">ESCOLHER FOTO DA LOGO
             <input type="file" accept="image/*" id="cfg-logo-file" style="display:none;">
           </label>
         </div>
         <div class="field"><label>Foto de capa / fachada</label>
-          <input id="cfg-cover" placeholder="https://..." readonly>
-          <label class="btn btn-secondary btn-sm btn-block-gap" style="display:block;text-align:center;">ESCOLHER FOTO DE CAPA
+          <input type="hidden" id="cfg-cover">
+          <div class="photo-upload" id="cfg-cover-preview" style="height:90px;margin-bottom:8px;"><span data-icon="camera"></span><span>Nenhuma foto</span></div>
+          <label class="btn btn-secondary btn-sm" style="display:block;text-align:center;">ESCOLHER FOTO DE CAPA
             <input type="file" accept="image/*" id="cfg-cover-file" style="display:none;">
           </label>
         </div>

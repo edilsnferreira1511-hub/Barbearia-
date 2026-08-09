@@ -344,7 +344,8 @@ document.getElementById('btn-save-barbeiro').onclick = async ()=>{
     if(existing) photoUrl = existing.photoUrl || null;
     if(A.pendingFile.barbeiro){
       btn.textContent = 'ENVIANDO FOTO...';
-      photoUrl = await uploadToImgbb(A.pendingFile.barbeiro);
+      try{ photoUrl = await compressImageToDataUrl(A.pendingFile.barbeiro, 500, 0.75); }
+      catch(photoErr){ console.error(photoErr); showToast(photoErr.message || 'Não deu pra processar a foto. O barbeiro foi salvo sem foto.','error'); }
     }
     await db.collection('barbers').doc(uid).set({
       name, phone: document.getElementById('barbeiro-telefone').value.trim(),
@@ -412,7 +413,8 @@ document.getElementById('btn-save-servico').onclick = async ()=>{
     let photoUrl = id ? (A.services.find(x=>x.id===id)?.photoUrl||null) : null;
     if(A.pendingFile.servico){
       btn.textContent = 'ENVIANDO FOTO...';
-      photoUrl = await uploadToImgbb(A.pendingFile.servico);
+      try{ photoUrl = await compressImageToDataUrl(A.pendingFile.servico, 500, 0.75); }
+      catch(photoErr){ console.error(photoErr); showToast(photoErr.message || 'Não deu pra processar a foto. O serviço foi salvo sem foto.','error'); }
     }
     const payload = {
       name, price, durationMin, description: document.getElementById('servico-descricao').value.trim(),
@@ -453,7 +455,7 @@ document.getElementById('btn-save-foto').onclick = async ()=>{
   if(!A.pendingFile.foto){ showToast('Escolha uma foto.','error'); return; }
   const btn = document.getElementById('btn-save-foto'); btn.disabled=true; btn.textContent='ENVIANDO...';
   try{
-    const url = await uploadToImgbb(A.pendingFile.foto);
+    const url = await compressImageToDataUrl(A.pendingFile.foto, 1000, 0.7);
     await db.collection('gallery').add({ url, section: document.getElementById('foto-secao').value, order: A.gallery.length, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
     showToast('Foto adicionada!','success');
     document.getElementById('modal-foto').classList.add('hidden');
@@ -465,26 +467,40 @@ document.getElementById('btn-save-foto').onclick = async ()=>{
 function renderConfigForm(){
   const b = A.businessSettings || {};
   document.getElementById('cfg-name').value = b.name||'DENNER BARBEARIA';
-  document.getElementById('cfg-logo').value = b.logoUrl||'';
-  document.getElementById('cfg-cover').value = b.coverPhotoUrl||'';
   document.getElementById('cfg-phone').value = b.phone||'';
   document.getElementById('cfg-whatsapp').value = b.whatsapp||'';
   document.getElementById('cfg-address').value = b.address||'';
   document.getElementById('cfg-instagram').value = b.instagram||'';
   document.getElementById('cfg-facebook').value = b.facebook||'';
+  document.getElementById('cfg-logo').value = b.logoUrl||'';
+  document.getElementById('cfg-cover').value = b.coverPhotoUrl||'';
+  setPhotoFieldPreview('cfg-logo','cfg-logo-preview');
+  setPhotoFieldPreview('cfg-cover','cfg-cover-preview');
   renderHoursForm(b.hours || defaultHours());
+}
+function setPhotoFieldPreview(inputId, previewId){
+  const val = document.getElementById(inputId).value;
+  const el = document.getElementById(previewId);
+  el.innerHTML = val ? `<img src="${val}">` : `<span data-icon="camera"></span><span>Nenhuma foto</span>`;
+  paintIcons(el);
 }
 document.getElementById('cfg-logo-file').addEventListener('change', async e=>{
   const file = e.target.files[0]; if(!file) return;
-  showToast('Enviando foto...','');
-  try{ document.getElementById('cfg-logo').value = await uploadToImgbb(file); showToast('Foto da logo pronta — não esqueça de Salvar.','success'); }
-  catch(err){ showToast(err.message || 'Erro ao enviar foto.','error'); }
+  try{
+    const dataUrl = await compressImageToDataUrl(file, 700, 0.72);
+    document.getElementById('cfg-logo').value = dataUrl;
+    setPhotoFieldPreview('cfg-logo','cfg-logo-preview');
+    showToast('Foto da logo pronta — não esqueça de Salvar.','success');
+  }catch(err){ showToast(err.message || 'Erro ao processar foto.','error'); }
 });
 document.getElementById('cfg-cover-file').addEventListener('change', async e=>{
   const file = e.target.files[0]; if(!file) return;
-  showToast('Enviando foto...','');
-  try{ document.getElementById('cfg-cover').value = await uploadToImgbb(file); showToast('Foto de capa pronta — não esqueça de Salvar.','success'); }
-  catch(err){ showToast(err.message || 'Erro ao enviar foto.','error'); }
+  try{
+    const dataUrl = await compressImageToDataUrl(file, 700, 0.72);
+    document.getElementById('cfg-cover').value = dataUrl;
+    setPhotoFieldPreview('cfg-cover','cfg-cover-preview');
+    showToast('Foto de capa pronta — não esqueça de Salvar.','success');
+  }catch(err){ showToast(err.message || 'Erro ao processar foto.','error'); }
 });
 document.getElementById('btn-save-config').onclick = async ()=>{
   const payload = {
@@ -628,19 +644,6 @@ function previewFile(file, container){
   const reader = new FileReader();
   reader.onload = ()=> container.insertAdjacentHTML('afterbegin', `<img src="${reader.result}">`);
   reader.readAsDataURL(file);
-}
-/* Envia a imagem para o ImgBB (hospedagem gratuita de imagens, sem cartão)
-   e devolve a URL pública. Configure sua chave grátis em firebase-config.js. */
-async function uploadToImgbb(file){
-  if(!IMGBB_API_KEY || IMGBB_API_KEY.includes('COLE_')){
-    throw new Error('Configure a chave do ImgBB em firebase-config.js (veja o README).');
-  }
-  const formData = new FormData();
-  formData.append('image', file);
-  const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method:'POST', body: formData });
-  const data = await res.json();
-  if(!data || !data.success) throw new Error('Falha ao enviar a foto. Tente novamente.');
-  return data.data.url;
 }
 function placeholderImgA(){
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#141b2e"/><text x="50" y="56" font-size="34" text-anchor="middle" fill="#cea23f" font-family="Georgia">D</text></svg>`);

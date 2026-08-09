@@ -70,21 +70,19 @@ Se ele esquecer a senha, tem um botão "Esqueci minha senha" na tela de
 login dele, que envia um link de redefinição por e-mail — nada disso
 passa pelo Firebase Console.
 
-## 7. Ativar upload de fotos (ImgBB — grátis, sem cartão)
+## 7. Fotos (logo, capa, barbeiros, serviços, galeria)
 
-Fotos (logo, capa, barbeiros, serviços, galeria) são enviadas direto do
-celular, mas guardadas usando o **ImgBB**, um serviço gratuito de
-hospedagem de imagens — assim você não precisa do Firebase Storage nem
-cadastrar cartão em lugar nenhum.
+Fotos são enviadas direto do celular e guardadas **dentro do seu próprio
+Firestore** — o site comprime a imagem no celular antes de salvar, então
+não precisa de Firebase Storage, cartão, nem conta em nenhum serviço
+externo. É só tocar em "escolher foto" em qualquer lugar do painel admin
+que peça imagem, e pronto.
 
-1. Acesse **api.imgbb.com** no navegador
-2. Crie uma conta grátis (ou entre com Google) — não pede cartão
-3. Na página, copie a **API Key**
-4. Abra `firebase-config.js` → substitua `COLE_SUA_CHAVE_IMGBB_AQUI` pela chave copiada
-5. Suba esse arquivo atualizado pro GitHub (substituindo o antigo)
-
-Depois disso, em qualquer lugar do painel admin que peça foto, é só tocar,
-escolher a foto do celular e pronto — o link é gerado sozinho.
+Único detalhe técnico: por ficar guardada como texto dentro do banco
+(em vez de um arquivo separado), cada foto é comprimida automaticamente
+para caber no limite do Firestore (a qualidade fica ótima para o uso no
+site — telas de celular — mas não é indicada para imprensa/impressão em
+alta resolução).
 
 ## 8. Publicar no GitHub Pages (pelo celular)
 
@@ -129,21 +127,12 @@ Todos os arquivos ficam soltos, sem pastas — é só selecionar tudo de uma vez
   (evita a maioria das corridas entre dois clientes agendando ao mesmo
   tempo), mas uma garantia 100% atômica exigiria uma Cloud Function/transação
   no servidor.
-- **Fotos via ImgBB**: simples e sem custo, mas depende de um serviço
-  externo — se um dia quiser trazer as fotos totalmente para dentro do seu
-  próprio projeto Firebase, o arquivo `storage.rules` já vem pronto para
-  quando você migrar para o Firebase Storage (que hoje exige o plano Blaze).
-
-## Índices do Firestore (importante)
-
-Algumas buscas do app combinam mais de um filtro (ex: barbeiro + data +
-status, ou "ativo" + ordenar por posição). O Firestore exige um **índice
-composto** para esse tipo de busca. Você não precisa criar nada na mão:
-na primeira vez que uma dessas buscas rodar, vai aparecer um erro no
-Console do navegador (F12) do tipo *"The query requires an index"* com um
-**link azul** — clique nele, confirme em "Criar índice" no Firebase Console,
-espere ~1 minuto e recarregue a página. Isso só acontece uma vez por tipo
-de busca.
+- **Fotos como texto no banco**: simples, gratuito e 100% dentro do seu
+  Firebase, mas cada documento do Firestore tem um limite de ~1MB — por
+  isso as fotos são comprimidas antes de salvar (ótimas para tela de
+  celular, não para impressão). Se um dia quiser fotos em alta resolução
+  separadas do banco, o arquivo `storage.rules` já vem pronto para quando
+  você migrar para o Firebase Storage (que hoje exige o plano Blaze).
 
 ## Testando localmente antes de publicar
 

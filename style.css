@@ -371,11 +371,17 @@ html,body{overflow-x:hidden;width:100%;}
 .modal-overlay{
   position:fixed;inset:0;background:rgba(3,4,8,.72);backdrop-filter:blur(3px);
   display:flex;align-items:flex-end;justify-content:center;z-index:300;
+  overflow-y:auto;
 }
 .modal-overlay.center{align-items:center;padding:20px;}
 .modal-sheet{
   width:100%;max-width:var(--max-w);background:var(--navy-900);border:1px solid var(--border-strong);
-  border-radius:22px 22px 0 0;padding:22px 20px 30px;max-height:88vh;overflow-y:auto;
+  border-radius:22px 22px 0 0;padding:22px 20px 30px;
+  max-height:85vh; max-height:85dvh;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
 }
 .modal-overlay.center .modal-sheet{border-radius:20px;padding:26px 22px;}
 .modal-handle{width:38px;height:4px;background:var(--border-strong);border-radius:4px;margin:0 auto 16px;}

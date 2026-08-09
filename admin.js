@@ -645,3 +645,12 @@ async function uploadToImgbb(file){
 function placeholderImgA(){
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#141b2e"/><text x="50" y="56" font-size="34" text-anchor="middle" fill="#cea23f" font-family="Georgia">D</text></svg>`);
 }
+
+/* Garante que o campo em edição sempre fique visível quando o teclado
+   do celular abre dentro de um modal (evita ficar "preso" sem ver o
+   campo ou o botão Salvar). */
+document.addEventListener('focusin', (e)=>{
+  if(e.target.closest('.modal-sheet')){
+    setTimeout(()=> e.target.scrollIntoView({block:'center', behavior:'smooth'}), 250);
+  }
+});

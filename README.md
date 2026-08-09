@@ -32,17 +32,24 @@ Isso já está pronto em `firebase-config.js` — pule para o passo 3.
 
 1. **Firestore Database → Regras** → apague o conteúdo → cole o conteúdo de `firestore.rules` → **Publicar**.
 
-## 4. Criar o acesso do Administrador (o "PIN")
+## 4. Criar o PIN do Administrador (direto pelo site, sem Firebase Console)
 
-O PIN do admin é, na prática, a senha de um usuário de e-mail/senha fixo:
+1. Abra `admin.html` (local ou já publicado).
+2. Como ainda não existe nenhum administrador, vai aparecer a tela **"Primeiro acesso"** automaticamente.
+3. Escolha o PIN que você vai usar (mínimo 6 dígitos), confirme, e toque em **CRIAR PIN E ENTRAR**.
+4. Pronto — já entra direto no painel com esse PIN a partir de agora.
 
-1. **Authentication → Users → Add user**.
-2. E-mail: `admin@dennerbarbearia.internal` (o mesmo valor da constante `ADMIN_INTERNAL_EMAIL` em `firebase-config.js` — troque os dois juntos se quiser outro e-mail).
-3. Senha: o PIN que você quer usar (ex: `278431`). Essa senha É o PIN digitado no app.
-4. Copie o **UID** gerado para esse usuário.
-5. **Firestore Database → Iniciar coleção** → ID da coleção: `admins` → ID do documento: **cole o UID copiado** → adicione um campo qualquer, ex: `name: "Administrador"` → Salvar.
+> ⚠️ **Importante — faça isso assim que publicar o site**: essa tela de
+> "Primeiro acesso" fica disponível pra **qualquer pessoa que abrir
+> `admin.html` antes de você**, já que o site é público. Depois que o
+> primeiro PIN é criado (por você ou por outra pessoa), essa porta se
+> fecha sozinha e não abre mais. Então: assim que subir os arquivos pro
+> GitHub Pages, entre em `admin.html` e crie seu PIN **antes** de
+> divulgar o link do site pra qualquer pessoa. Se por acaso alguém criar
+> antes de você, me avise que ajudo a resetar pelo Firebase Console.
 
-Pronto: agora o ícone de estrela no app e a tela `admin.html` aceitam esse PIN.
+Depois de criado, você pode trocar o PIN quando quiser em **Painel Admin
+→ Configurações → Administrador**, sem precisar do Firebase Console.
 
 ## 5. Popular dados iniciais (serviços e horários)
 
@@ -51,16 +58,17 @@ Pronto: agora o ícone de estrela no app e a tela `admin.html` aceitam esse PIN.
 3. Isso cria os 4 serviços iniciais e os horários de funcionamento padrão.
    Depois disso, ajuste tudo pela própria aba **Configurações** e **Serviços** do painel.
 
-## 6. Cadastrar os barbeiros
+## 6. Cadastrar os barbeiros (direto pelo painel)
 
-Como criar contas de outros usuários exige um servidor administrativo
-(fora do escopo de um site 100% estático), o fluxo é:
+1. No painel admin → aba **Barbeiros** → **＋ NOVO BARBEIRO**.
+2. Preencha nome, telefone, foto (opcional) e o **e-mail e senha de login** que esse barbeiro vai usar.
+3. Toque em **SALVAR**.
 
-1. **Authentication → Add user** → crie um e-mail/senha para o barbeiro (esse e-mail é o "login" que ele vai digitar em `barbeiro.html`).
-2. Copie o UID gerado.
-3. No painel admin → aba **Barbeiros** → **Novo Barbeiro** → cole esse UID no campo "UID de login", preencha nome/foto/telefone → Salvar.
-
-O barbeiro agora consegue entrar em `barbeiro.html` e só enxerga a própria agenda.
+O login já é criado automaticamente e o barbeiro já consegue entrar em
+`barbeiro.html` com esse e-mail e senha, enxergando só a própria agenda.
+Se ele esquecer a senha, tem um botão "Esqueci minha senha" na tela de
+login dele, que envia um link de redefinição por e-mail — nada disso
+passa pelo Firebase Console.
 
 ## 7. Ativar upload de fotos (ImgBB — grátis, sem cartão)
 

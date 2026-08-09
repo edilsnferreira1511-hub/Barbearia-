@@ -14,26 +14,81 @@ function paintIcons(root=document){
     if(!el.dataset.painted){ el.innerHTML = icon(el.dataset.icon); el.dataset.painted='1'; }
   });
 }
-document.getElementById('admin-email-label').textContent = ADMIN_INTERNAL_EMAIL;
+/* App Firebase secundário — usado SÓ para criar login de barbeiros sem
+   derrubar a sessão do administrador que está logado no app principal. */
+const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
+const secondaryAuth = secondaryApp.auth();
 
 /* ---------------- AUTENTICAÇÃO ---------------- */
-auth.onAuthStateChanged(async user=>{
-  if(!user){ showLogin(); return; }
+let setupNeeded = false;
+
+async function checkSetupAndAuth(){
   try{
-    const doc = await db.collection('admins').doc(user.uid).get();
-    if(doc.exists){ showPanel(); initAll(); }
-    else { await auth.signOut(); showLogin(); }
-  }catch(err){ console.error(err); await auth.signOut(); showLogin(); }
-});
+    const setupDoc = await db.collection('system').doc('setup').get();
+    setupNeeded = !setupDoc.exists || setupDoc.data().adminCreated === false;
+  }catch(err){ console.error(err); setupNeeded = false; }
+  auth.onAuthStateChanged(async user=>{
+    if(!user){ setupNeeded ? showSetup() : showLogin(); return; }
+    try{
+      const doc = await db.collection('admins').doc(user.uid).get();
+      if(doc.exists){ showPanel(); initAll(); }
+      else { await auth.signOut(); setupNeeded ? showSetup() : showLogin(); }
+    }catch(err){ console.error(err); await auth.signOut(); showLogin(); }
+  });
+}
+checkSetupAndAuth();
+
 function showLogin(){
+  document.getElementById('setup-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('admin-shell').classList.add('hidden');
 }
+function showSetup(){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('setup-screen').classList.remove('hidden');
+  document.getElementById('admin-shell').classList.add('hidden');
+}
 function showPanel(){
+  document.getElementById('setup-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('admin-shell').classList.remove('hidden');
   paintIcons();
 }
+
+/* --- primeiro acesso: criar o PIN --- */
+document.getElementById('btn-setup-create').onclick = async ()=>{
+  const pin = document.getElementById('setup-pin').value.trim();
+  const pin2 = document.getElementById('setup-pin2').value.trim();
+  if(pin.length < 6){ showToast('O PIN precisa ter pelo menos 6 dígitos.','error'); return; }
+  if(pin !== pin2){ showToast('Os PINs digitados são diferentes.','error'); return; }
+  const btn = document.getElementById('btn-setup-create'); btn.disabled = true; btn.textContent = 'CRIANDO...';
+  try{
+    // garante que o "portão" de primeiro acesso existe antes de tentar abrir
+    const setupRef = db.collection('system').doc('setup');
+    const setupDoc = await setupRef.get();
+    if(!setupDoc.exists) await setupRef.set({ adminCreated:false });
+    else if(setupDoc.data().adminCreated === true){
+      showToast('Um administrador já foi criado. Recarregue a página.','error');
+      return;
+    }
+    // cria a conta de autenticação do administrador
+    const cred = await auth.createUserWithEmailAndPassword(ADMIN_INTERNAL_EMAIL, pin);
+    // registra esse UID como administrador (a regra só permite pois adminCreated ainda é false)
+    await db.collection('admins').doc(cred.user.uid).set({ name:'Administrador' });
+    // fecha a porta de primeiro acesso pra sempre
+    await setupRef.update({ adminCreated:true });
+    showToast('PIN criado! Bem-vindo.','success');
+  }catch(err){
+    console.error(err);
+    if(err.code === 'auth/email-already-in-use'){
+      showToast('Já existe um administrador criado. Recarregue a página e use o PIN normal.','error');
+    } else {
+      showToast(err.message || 'Erro ao criar o PIN.','error');
+    }
+  }finally{ btn.disabled = false; btn.textContent = 'CRIAR PIN E ENTRAR'; }
+};
+document.getElementById('btn-setup-back-site').onclick = ()=> window.location.href='index.html';
+
 document.getElementById('btn-login').onclick = async ()=>{
   const pin = document.getElementById('login-pin').value.trim();
   if(!pin){ showToast('Digite o PIN.','error'); return; }
@@ -248,8 +303,10 @@ function openBarbeiroModal(b){
   document.getElementById('barbeiro-id').value = b ? b.id : '';
   document.getElementById('barbeiro-nome').value = b ? b.name : '';
   document.getElementById('barbeiro-telefone').value = b ? (b.phone||'') : '';
-  document.getElementById('barbeiro-uid').value = b ? b.id : '';
-  document.getElementById('barbeiro-uid').disabled = !!b;
+  document.getElementById('barbeiro-email').value = '';
+  document.getElementById('barbeiro-senha').value = '';
+  document.getElementById('barbeiro-login-fields').classList.toggle('hidden', !!b);
+  document.getElementById('barbeiro-login-fixed').classList.toggle('hidden', !b);
   document.getElementById('barbeiro-ativo').classList.toggle('on', b ? !!b.active : true);
   const preview = document.getElementById('barbeiro-photo-preview');
   preview.querySelectorAll('img').forEach(i=>i.remove());
@@ -266,11 +323,22 @@ document.getElementById('barbeiro-photo-file').addEventListener('change', e=>{
 document.getElementById('btn-cancel-barbeiro').onclick = ()=> document.getElementById('modal-barbeiro').classList.add('hidden');
 document.getElementById('btn-save-barbeiro').onclick = async ()=>{
   const existingId = document.getElementById('barbeiro-id').value;
-  const uid = existingId || document.getElementById('barbeiro-uid').value.trim();
   const name = document.getElementById('barbeiro-nome').value.trim();
-  if(!uid || !name){ showToast('Preencha nome e UID de login.','error'); return; }
+  if(!name){ showToast('Preencha o nome.','error'); return; }
   const btn = document.getElementById('btn-save-barbeiro'); btn.disabled = true; btn.textContent='SALVANDO...';
   try{
+    let uid = existingId;
+    if(!uid){
+      // criando um barbeiro novo: precisa de e-mail + senha pra gerar o login dele
+      const email = document.getElementById('barbeiro-email').value.trim();
+      const senha = document.getElementById('barbeiro-senha').value;
+      if(!email || senha.length < 6){ showToast('Preencha e-mail e uma senha com pelo menos 6 caracteres.','error'); btn.disabled=false; btn.textContent='SALVAR'; return; }
+      btn.textContent = 'CRIANDO LOGIN...';
+      // usa o app secundário pra não derrubar a sessão do administrador
+      const cred = await secondaryAuth.createUserWithEmailAndPassword(email, senha);
+      uid = cred.user.uid;
+      await secondaryAuth.signOut();
+    }
     let photoUrl = null;
     const existing = A.barbers.find(x=>x.id===uid);
     if(existing) photoUrl = existing.photoUrl || null;
@@ -285,7 +353,11 @@ document.getElementById('btn-save-barbeiro').onclick = async ()=>{
     }, {merge:true});
     showToast('Barbeiro salvo!','success');
     document.getElementById('modal-barbeiro').classList.add('hidden');
-  }catch(err){ console.error(err); showToast(err.message || 'Erro ao salvar barbeiro.','error'); }
+  }catch(err){
+    console.error(err);
+    if(err.code === 'auth/email-already-in-use') showToast('Esse e-mail já está em uso por outro login.','error');
+    else showToast(err.message || 'Erro ao salvar barbeiro.','error');
+  }
   finally{ btn.disabled=false; btn.textContent='SALVAR'; }
 };
 
@@ -427,6 +499,27 @@ document.getElementById('btn-save-config').onclick = async ()=>{
   };
   try{ await db.collection('businessSettings').doc('general').set(payload,{merge:true}); showToast('Configurações salvas!','success'); }
   catch(err){ console.error(err); showToast('Erro ao salvar.','error'); }
+};
+
+document.getElementById('btn-change-pin').onclick = async ()=>{
+  const pin = document.getElementById('cfg-new-pin').value.trim();
+  const pin2 = document.getElementById('cfg-new-pin2').value.trim();
+  if(pin.length < 6){ showToast('O novo PIN precisa ter pelo menos 6 dígitos.','error'); return; }
+  if(pin !== pin2){ showToast('Os PINs digitados são diferentes.','error'); return; }
+  const btn = document.getElementById('btn-change-pin'); btn.disabled = true; btn.textContent = 'TROCANDO...';
+  try{
+    await auth.currentUser.updatePassword(pin);
+    document.getElementById('cfg-new-pin').value = '';
+    document.getElementById('cfg-new-pin2').value = '';
+    showToast('PIN alterado com sucesso!','success');
+  }catch(err){
+    console.error(err);
+    if(err.code === 'auth/requires-recent-login'){
+      showToast('Por segurança, saia e entre de novo com o PIN atual antes de trocar.','error');
+    } else {
+      showToast(err.message || 'Erro ao trocar o PIN.','error');
+    }
+  }finally{ btn.disabled = false; btn.textContent = 'TROCAR PIN'; }
 };
 function renderHoursForm(hours){
   const el = document.getElementById('cfg-hours');

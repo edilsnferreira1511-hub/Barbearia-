@@ -42,6 +42,14 @@ document.getElementById('btn-login').onclick = async ()=>{
   catch(err){ showToast('Login ou senha incorretos.','error'); }
 };
 document.getElementById('btn-back-site').onclick = ()=> window.location.href='index.html';
+document.getElementById('btn-forgot-password').onclick = async ()=>{
+  const email = document.getElementById('login-email').value.trim();
+  if(!email){ showToast('Digite seu e-mail de login no campo acima primeiro.','error'); return; }
+  try{
+    await auth.sendPasswordResetEmail(email);
+    showToast('Enviamos um link de redefinição para seu e-mail.','success');
+  }catch(err){ showToast('Não foi possível enviar. Confira o e-mail digitado.','error'); }
+};
 document.getElementById('btn-logout').onclick = async ()=>{ await auth.signOut(); window.location.href='index.html'; };
 
 /* ---------------- AGENDA ---------------- */

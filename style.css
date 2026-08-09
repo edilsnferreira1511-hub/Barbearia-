@@ -282,7 +282,7 @@ html,body{overflow-x:hidden;width:100%;}
     repeating-linear-gradient(115deg, #171d2c 0 18px, #11151f 18px 36px);
   display:flex;flex-direction:column;justify-content:flex-end;padding:26px 20px 24px;
 }
-.hero-logo{width:150px;margin:0 auto 18px;}
+.hero-logo{width:220px;max-width:78%;margin:0 auto 18px;}
 .hero h1{font-family:var(--font-display);font-size:32px;line-height:1.08;margin:0 0 10px;text-transform:uppercase;font-weight:800;}
 .hero h1 .g{color:var(--gold-400);}
 .hero p.sub{color:var(--white-dim);font-size:14.5px;line-height:1.5;margin:0 0 20px;}

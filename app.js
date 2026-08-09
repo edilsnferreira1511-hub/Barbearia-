@@ -119,15 +119,21 @@ function renderBusinessSettings(){
 
 /* ---------------- SERVIÇOS ---------------- */
 function listenServices(){
-  db.collection('services').where('active','==',true).orderBy('order','asc').onSnapshot(snap=>{
-    state.services = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  db.collection('services').where('active','==',true).onSnapshot(snap=>{
+    state.services = snap.docs.map(d=>({id:d.id, ...d.data()}))
+      .sort((a,b)=>(a.order??0)-(b.order??0));
     renderServicesList();
     renderBookingServices();
     if(state.booking.service){
       const fresh = state.services.find(s=>s.id===state.booking.service.id);
       if(fresh) state.booking.service = fresh; // preço/duração sempre atualizados
     }
-  }, err=>console.error(err));
+  }, err=>{
+    console.error(err);
+    const msg = emptyState('Não foi possível carregar os serviços. Puxe a tela para atualizar ou tente novamente em instantes.');
+    document.getElementById('services-list').innerHTML = msg;
+    document.getElementById('booking-services-list').innerHTML = msg;
+  });
 }
 function renderServicesList(){
   const el = document.getElementById('services-list');
@@ -343,31 +349,35 @@ async function initTimeStep(){
   wrap.innerHTML = '<div class="loader"></div>';
   const { barber, service, dateKey:dk } = state.booking;
   const hours = state.businessSettings.hours[WEEKDAY_KEYS[dateFromKey(dk).getDay()]];
-  const [apptsSnap, blockedSnap] = await Promise.all([
-    db.collection('appointments')
-      .where('barberId','==',barber.id).where('date','==',dk)
-      .where('status','in',['confirmed','completed']).get(),
-    db.collection('blockedTimes').where('barberId','in',[barber.id,'all']).where('date','==',dk).get(),
-  ]);
-  const busy = apptsSnap.docs.map(d=>({startTime:d.data().startTime, durationMin:d.data().serviceDuration}));
-  blockedSnap.docs.forEach(d=>{
-    const b = d.data();
-    if(!b.fullDay) busy.push({startTime:b.startTime, durationMin: timeToMinutes(b.endTime)-timeToMinutes(b.startTime)});
-  });
-  const allSlots = generateSlots(hours.open, hours.close, 30);
-  const available = filterAvailableSlots(allSlots, service.durationMin, hours.close, busy);
-  if(!allSlots.length){ wrap.innerHTML = emptyState('Barbearia fechada nesse dia.'); return; }
-  wrap.innerHTML = `<div class="slot-grid">${allSlots.map(s=>{
-    const ok = available.includes(s);
-    return `<div class="slot-btn ${ok?'':'disabled'}" data-time="${s}">${s}</div>`;
-  }).join('')}</div>`;
-  wrap.querySelectorAll('.slot-btn:not(.disabled)').forEach(btn=>{
-    btn.onclick = ()=>{
-      state.booking.time = btn.dataset.time;
-      wrap.querySelectorAll('.slot-btn').forEach(b=>b.classList.toggle('selected', b===btn));
-      document.getElementById('btn-step4-continue').disabled = false;
-    };
-  });
+  try{
+    const [apptsSnap, blockedSnap] = await Promise.all([
+      db.collection('appointments').where('barberId','==',barber.id).get(),
+      db.collection('blockedTimes').where('barberId','in',[barber.id,'all']).get(),
+    ]);
+    const busy = apptsSnap.docs.map(d=>d.data())
+      .filter(a => a.date===dk && (a.status==='confirmed' || a.status==='completed'))
+      .map(a=>({startTime:a.startTime, durationMin:a.serviceDuration}));
+    blockedSnap.docs.map(d=>d.data()).filter(b=>b.date===dk).forEach(b=>{
+      if(!b.fullDay) busy.push({startTime:b.startTime, durationMin: timeToMinutes(b.endTime)-timeToMinutes(b.startTime)});
+    });
+    const allSlots = generateSlots(hours.open, hours.close, 30);
+    const available = filterAvailableSlots(allSlots, service.durationMin, hours.close, busy);
+    if(!allSlots.length){ wrap.innerHTML = emptyState('Barbearia fechada nesse dia.'); return; }
+    wrap.innerHTML = `<div class="slot-grid">${allSlots.map(s=>{
+      const ok = available.includes(s);
+      return `<div class="slot-btn ${ok?'':'disabled'}" data-time="${s}">${s}</div>`;
+    }).join('')}</div>`;
+    wrap.querySelectorAll('.slot-btn:not(.disabled)').forEach(btn=>{
+      btn.onclick = ()=>{
+        state.booking.time = btn.dataset.time;
+        wrap.querySelectorAll('.slot-btn').forEach(b=>b.classList.toggle('selected', b===btn));
+        document.getElementById('btn-step4-continue').disabled = false;
+      };
+    });
+  }catch(err){
+    console.error(err);
+    wrap.innerHTML = emptyState('Não foi possível carregar os horários. Volte e tente novamente.');
+  }
 }
 
 /* ---------------- ETAPA 5 — CONFIRMAÇÃO ---------------- */
@@ -398,10 +408,10 @@ document.getElementById('btn-confirm-booking').onclick = async ()=>{
   try{
     const { service, barber, dateKey:dk, time } = state.booking;
     // revalidação de conflito no momento da confirmação (evita corrida entre dois clientes)
-    const conflictSnap = await db.collection('appointments')
-      .where('barberId','==',barber.id).where('date','==',dk)
-      .where('status','in',['confirmed','completed']).get();
-    const busy = conflictSnap.docs.map(d=>({startTime:d.data().startTime, durationMin:d.data().serviceDuration}));
+    const conflictSnap = await db.collection('appointments').where('barberId','==',barber.id).get();
+    const busy = conflictSnap.docs.map(d=>d.data())
+      .filter(a => a.date===dk && (a.status==='confirmed' || a.status==='completed'))
+      .map(a=>({startTime:a.startTime, durationMin:a.serviceDuration}));
     const start = timeToMinutes(time), end = start + Number(service.durationMin);
     const conflict = busy.some(b=>{
       const bs = timeToMinutes(b.startTime), be = bs + Number(b.durationMin);

@@ -30,9 +30,29 @@ service cloud.firestore {
     }
 
     /* --- papéis --- */
+    match /system/setup {
+      // Documento único que controla se o PIN do admin já foi criado.
+      // Depois de usado uma vez, fecha sozinho (adminCreated vira true
+      // e nunca mais pode voltar a false por regra).
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['adminCreated'])
+                    && request.resource.data.adminCreated == false;
+      allow update: if isSignedIn()
+                    && resource.data.adminCreated == false
+                    && request.resource.data.adminCreated == true
+                    && onlyFieldsChanged(['adminCreated']);
+      allow delete: if false;
+    }
     match /admins/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid;
-      allow write: if false; // criado manualmente pelo Firebase Console
+      // Só permite criar o PRIMEIRO administrador, e só com a conta de
+      // e-mail fixa usada pelo PIN (definida em firebase-config.js).
+      // Depois que existir um admin, essa porta se fecha sozinha.
+      allow create: if isSignedIn() && request.auth.uid == uid
+                    && request.auth.token.email == 'admin@dennerbarbearia.internal'
+                    && exists(/databases/$(database)/documents/system/setup)
+                    && get(/databases/$(database)/documents/system/setup).data.adminCreated == false;
+      allow update, delete: if false;
     }
     match /barbers/{uid} {
       allow read: if true; // lista pública de barbeiros ativos

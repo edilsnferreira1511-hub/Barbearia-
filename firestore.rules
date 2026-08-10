@@ -80,7 +80,8 @@ service cloud.firestore {
     }
     match /blockedTimes/{id} {
       allow read: if true; // necessário p/ calcular horários disponíveis
-      allow write: if isAdmin();
+      allow create: if isAdmin() || (isBarber() && request.resource.data.barberId == request.auth.uid);
+      allow update, delete: if isAdmin() || (isBarber() && resource.data.barberId == request.auth.uid);
     }
     match /daysOff/{id} {
       allow read: if true;

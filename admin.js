@@ -434,7 +434,7 @@ document.getElementById('btn-save-servico').onclick = async ()=>{
 function renderGallery(){
   const el = document.getElementById('gallery-grid');
   el.innerHTML = A.gallery.map(g=>`
-    <div style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:1;">
+    <div style="position:relative;border-radius:16px;overflow:hidden;aspect-ratio:1;">
       <img src="${g.url}" style="width:100%;height:100%;object-fit:cover;">
       <button data-del-foto="${g.id}" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);border:none;color:#fff;">✕</button>
     </div>`).join('') || emptyStateA('Nenhuma foto na galeria ainda.');

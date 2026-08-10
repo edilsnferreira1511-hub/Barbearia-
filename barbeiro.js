@@ -56,6 +56,7 @@ document.getElementById('btn-logout').onclick = async ()=>{ await auth.signOut()
 function initAgenda(){
   renderDayTabs();
   listenAgenda();
+  listenBlocked();
 }
 function renderDayTabs(){
   const el = document.getElementById('day-tabs');
@@ -104,3 +105,67 @@ function renderAgendaList(){
   el.querySelectorAll('[data-done]').forEach(b=>b.onclick=()=>db.collection('appointments').doc(b.dataset.done).update({status:'completed'}).then(()=>showToast('Atendimento concluído.','success')));
   el.querySelectorAll('[data-absent]').forEach(b=>b.onclick=()=>{ if(confirm('Marcar como ausência/cancelamento?')) db.collection('appointments').doc(b.dataset.absent).update({status:'cancelled'}).then(()=>showToast('Atualizado.','success')); });
 }
+
+/* ---------------- BLOQUEIO DE HORÁRIO / FOLGA ---------------- */
+let barberBlocks = [];
+function listenBlocked(){
+  db.collection('blockedTimes').where('barberId','==',B.barber.id).onSnapshot(snap=>{
+    barberBlocks = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderBlockedList();
+  }, err=>console.error(err));
+}
+function renderBlockedList(){
+  const el = document.getElementById('barber-blocked-list');
+  const upcoming = barberBlocks
+    .filter(b=>b.date >= dateKey(new Date()))
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  if(!upcoming.length){ el.innerHTML = `<p style="font-size:12.5px;color:var(--white-faint);">Nenhum bloqueio cadastrado.</p>`; return; }
+  el.innerHTML = upcoming.map(b=>`
+    <div class="list-card">
+      <div class="info">
+        <div class="title">${formatDateBR(b.date)}</div>
+        <div class="meta">${b.fullDay ? 'Dia inteiro (folga)' : `${b.startTime} — ${b.endTime}`}${b.reason ? (' · '+b.reason) : ''}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" data-del-block="${b.id}">EXCLUIR</button>
+    </div>`).join('');
+  el.querySelectorAll('[data-del-block]').forEach(btn=>{
+    btn.onclick = ()=>{ if(confirm('Remover este bloqueio?')) db.collection('blockedTimes').doc(btn.dataset.delBlock).delete().then(()=>showToast('Bloqueio removido.','success')); };
+  });
+}
+document.getElementById('btn-add-block').onclick = ()=>{
+  document.getElementById('bl-data').value = '';
+  document.getElementById('bl-inicio').value = '';
+  document.getElementById('bl-fim').value = '';
+  document.getElementById('bl-motivo').value = '';
+  document.getElementById('bl-fullday').classList.remove('on');
+  document.getElementById('bl-time-row').style.display = 'flex';
+  document.getElementById('modal-bloqueio').classList.remove('hidden');
+};
+document.getElementById('btn-cancel-bloqueio').onclick = ()=> document.getElementById('modal-bloqueio').classList.add('hidden');
+document.getElementById('bl-fullday').onclick = function(){
+  this.classList.toggle('on');
+  document.getElementById('bl-time-row').style.display = this.classList.contains('on') ? 'none' : 'flex';
+};
+document.getElementById('btn-save-bloqueio').onclick = async ()=>{
+  const date = document.getElementById('bl-data').value;
+  const fullDay = document.getElementById('bl-fullday').classList.contains('on');
+  if(!date){ showToast('Escolha uma data.','error'); return; }
+  if(!fullDay && (!document.getElementById('bl-inicio').value || !document.getElementById('bl-fim').value)){
+    showToast('Preencha o horário de início e fim, ou marque "dia inteiro".','error'); return;
+  }
+  const payload = {
+    barberId: B.barber.id,
+    date,
+    fullDay,
+    startTime: fullDay ? '00:00' : document.getElementById('bl-inicio').value,
+    endTime: fullDay ? '23:59' : document.getElementById('bl-fim').value,
+    reason: document.getElementById('bl-motivo').value.trim(),
+  };
+  const btn = document.getElementById('btn-save-bloqueio'); btn.disabled = true; btn.textContent = 'SALVANDO...';
+  try{
+    await db.collection('blockedTimes').add(payload);
+    showToast('Horário bloqueado!','success');
+    document.getElementById('modal-bloqueio').classList.add('hidden');
+  }catch(err){ console.error(err); showToast('Erro ao bloquear horário.','error'); }
+  finally{ btn.disabled = false; btn.textContent = 'SALVAR'; }
+};

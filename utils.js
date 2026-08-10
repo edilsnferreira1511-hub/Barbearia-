@@ -75,6 +75,28 @@ function buildConfirmationMessage({serviceName, barberName, date, startTime, pri
   return `✂️ DENNER BARBEARIA\n\nSeu horário foi confirmado!\n\n📅 Data: ${formatDateBR(date)}\n⏰ Horário: ${startTime}\n✂️ Serviço: ${serviceName}\n👤 Barbeiro: ${barberName}\n\n💰 Valor: ${formatCurrency(price)}\n\nTe esperamos! 💈`;
 }
 
+/**
+ * Monta o link do Google Calendar para o cliente adicionar o agendamento
+ * na própria agenda. O horário de término é calculado a partir da
+ * duração do serviço (durationMin).
+ */
+function buildGoogleCalendarLink({serviceName, barberName, date, startTime, durationMin, address}){
+  const d = dateFromKey(date);
+  const [h,m] = startTime.split(':').map(Number);
+  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m);
+  const end = new Date(start.getTime() + Number(durationMin||30)*60000);
+  const fmt = (dt)=> `${dt.getFullYear()}${pad2(dt.getMonth()+1)}${pad2(dt.getDate())}T${pad2(dt.getHours())}${pad2(dt.getMinutes())}00`;
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `${serviceName} — Denner Barbearia`,
+    dates: `${fmt(start)}/${fmt(end)}`,
+    details: `Agendamento na Denner Barbearia\nServiço: ${serviceName}\nBarbeiro: ${barberName}`,
+    location: address || 'Denner Barbearia',
+    ctz: 'America/Sao_Paulo',
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
 /* ---------------- TOAST ---------------- */
 function showToast(msg, type=''){
   let host = document.getElementById('toast-host');

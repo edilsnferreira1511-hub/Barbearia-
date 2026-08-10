@@ -438,6 +438,13 @@ document.getElementById('btn-confirm-booking').onclick = async ()=>{
       const msg = buildConfirmationMessage({serviceName:service.name, barberName:barber.name, date:dk, startTime:time, price:service.price});
       window.open(buildWhatsAppLink(state.businessSettings.whatsapp, msg), '_blank');
     };
+    document.getElementById('btn-add-calendar').onclick = ()=>{
+      const link = buildGoogleCalendarLink({
+        serviceName: service.name, barberName: barber.name, date: dk, startTime: time,
+        durationMin: service.durationMin, address: state.businessSettings.address,
+      });
+      window.open(link, '_blank');
+    };
     for(let i=1;i<=5;i++) document.getElementById('step-'+i).classList.add('hidden');
     document.getElementById('step-success').classList.remove('hidden');
     document.getElementById('steps-indicator').innerHTML = '';

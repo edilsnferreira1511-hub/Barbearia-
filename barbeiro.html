@@ -37,6 +37,27 @@
 
     <div class="section-heading" id="agenda-heading">AGENDA DE HOJE</div>
     <div id="barber-agenda"><div class="loader"></div></div>
+
+    <div class="section-heading" style="margin-top:24px;">BLOQUEIOS E FOLGAS</div>
+    <div id="barber-blocked-list" style="margin-bottom:10px;"></div>
+    <button class="btn btn-secondary" id="btn-add-block">＋ BLOQUEAR HORÁRIO OU FOLGA</button>
+  </div>
+</div>
+
+<!-- ===================== MODAL: BLOQUEIO ===================== -->
+<div class="modal-overlay hidden" id="modal-bloqueio">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <h3 class="modal-title">Bloquear Horário</h3>
+    <div class="field"><label>Data</label><input type="date" id="bl-data"></div>
+    <div class="switch-row"><span>Bloquear o dia inteiro (folga)</span><div class="switch" id="bl-fullday"></div></div>
+    <div class="field-row" id="bl-time-row">
+      <div class="field"><label>Início</label><input type="time" id="bl-inicio"></div>
+      <div class="field"><label>Fim</label><input type="time" id="bl-fim"></div>
+    </div>
+    <div class="field"><label>Motivo (opcional)</label><input id="bl-motivo" placeholder="Ex: Consulta médica"></div>
+    <button class="btn btn-primary btn-block-gap" id="btn-save-bloqueio">SALVAR</button>
+    <button class="btn btn-ghost" id="btn-cancel-bloqueio">Cancelar</button>
   </div>
 </div>
 

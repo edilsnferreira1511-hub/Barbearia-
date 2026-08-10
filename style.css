@@ -31,6 +31,8 @@
   /* superfícies */
   --bg:var(--navy-950);
   --surface:linear-gradient(180deg,var(--navy-800),var(--navy-900));
+  --glass-bg:rgba(17,24,41,.58);
+  --glass-blur:blur(14px);
   --surface-flat:var(--navy-800);
   --border:rgba(230,200,120,.14);
   --border-strong:rgba(230,200,120,.30);
@@ -85,8 +87,9 @@ html,body{overflow-x:hidden;width:100%;}
   height:var(--header-h);
   display:flex;align-items:center;justify-content:space-between;
   padding:0 16px;
-  background:rgba(4,6,12,.86);
-  backdrop-filter:blur(10px);
+  background:rgba(4,6,12,.62);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
   border-bottom:1px solid var(--border);
 }
 .app-header .brand{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:700;letter-spacing:.02em;font-size:15px;}
@@ -104,8 +107,9 @@ html,body{overflow-x:hidden;width:100%;}
   position:fixed;left:0;right:0;bottom:0;z-index:50;
   max-width:var(--max-w);margin:0 auto;
   height:var(--nav-h);
-  background:rgba(6,9,17,.92);
-  backdrop-filter:blur(12px);
+  background:rgba(6,9,17,.66);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
   border-top:1px solid var(--border);
   display:flex;align-items:stretch;
   padding-bottom:env(safe-area-inset-bottom);
@@ -159,9 +163,9 @@ html,body{overflow-x:hidden;width:100%;}
   display:flex;align-items:center;justify-content:center;gap:8px;
   width:100%;padding:15px 18px;border-radius:var(--radius-sm);
   font-weight:700;font-size:14.5px;letter-spacing:.03em;text-transform:uppercase;
-  border:1px solid transparent;transition:transform .15s ease, opacity .15s ease;
+  border:1px solid transparent;transition:transform .1s ease, opacity .15s ease;
 }
-.btn:active{transform:scale(.98);}
+.btn:active{transform:scale(.97);}
 .btn-primary{
   background:linear-gradient(135deg,var(--gold-300),var(--gold-600));
   color:#1a1204;
@@ -180,21 +184,28 @@ html,body{overflow-x:hidden;width:100%;}
 
 /* ===================== CARDS ===================== */
 .card{
-  background:var(--surface);
+  background:var(--glass-bg);
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
   border:1px solid var(--border);
   border-radius:var(--radius-md);
   box-shadow:var(--shadow-card);
+  transition:transform .1s ease;
 }
+.card:active{transform:scale(.97);}
 .card-pad{padding:16px;}
 
 .list-card{
   display:flex;align-items:center;gap:12px;
   padding:12px;margin-bottom:10px;
-  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md);
+  background:var(--glass-bg); border:1px solid var(--border); border-radius:var(--radius-md);
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
+  transition:transform .1s ease, border-color .15s ease, box-shadow .15s ease;
 }
-.list-card.selected{border-color:var(--gold-500); box-shadow:0 0 0 1px var(--gold-500) inset;}
+.list-card:active{transform:scale(.97);}
+.list-card.selected{border-color:var(--gold-500); box-shadow:0 0 0 1px var(--gold-500) inset, 0 0 16px rgba(206,162,63,.35);}
 .list-card img,.thumb{
-  width:56px;height:56px;border-radius:12px;object-fit:cover;flex:none;
+  width:56px;height:56px;border-radius:16px;object-fit:cover;flex:none;
   background:var(--navy-700);
 }
 .list-card .info{flex:1;min-width:0;}
@@ -227,20 +238,25 @@ html,body{overflow-x:hidden;width:100%;}
 .slot-btn{
   padding:13px 8px;border-radius:10px;text-align:center;font-weight:700;font-size:14px;
   background:var(--surface-flat);border:1px solid var(--border);color:var(--white);
+  transition:transform .1s ease;
 }
-.slot-btn.selected{background:linear-gradient(135deg,var(--gold-300),var(--gold-600));color:#1a1204;border-color:transparent;}
+.slot-btn:active{transform:scale(.97);}
+.slot-btn.selected{background:linear-gradient(135deg,var(--gold-300),var(--gold-600));color:#1a1204;border-color:transparent;box-shadow:0 0 18px rgba(206,162,63,.45);}
 .slot-btn.disabled{opacity:.28;text-decoration:line-through;pointer-events:none;}
 
 /* dias (chips horizontais) */
 .day-chip-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
 .day-chip{
-  padding:10px 4px;border-radius:12px;text-align:center;background:var(--surface-flat);
+  padding:10px 4px;border-radius:12px;text-align:center;background:var(--glass-bg);
+  backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur);
   border:1px solid var(--border);
+  transition:transform .1s ease;
 }
+.day-chip:active{transform:scale(.97);}
 .day-chip .dow{font-size:10px;color:var(--white-faint);text-transform:uppercase;font-weight:700;}
 .day-chip .num{font-size:17px;font-weight:800;margin:2px 0;}
 .day-chip .mon{font-size:9.5px;color:var(--white-faint);text-transform:uppercase;}
-.day-chip.selected{background:linear-gradient(135deg,var(--gold-300),var(--gold-600));border-color:transparent;}
+.day-chip.selected{background:linear-gradient(135deg,var(--gold-300),var(--gold-600));border-color:transparent;box-shadow:0 0 18px rgba(206,162,63,.45);}
 .day-chip.selected .dow,.day-chip.selected .num,.day-chip.selected .mon{color:#1a1204;}
 
 /* mini calendário */
@@ -251,9 +267,11 @@ html,body{overflow-x:hidden;width:100%;}
 .cal-day{
   aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;
   font-size:12.5px;font-weight:600;color:var(--white-dim);
+  transition:transform .1s ease;
 }
+.cal-day:active{transform:scale(.9);}
 .cal-day.today{border:1px solid var(--gold-500);}
-.cal-day.selected{background:var(--gold-400);color:#1a1204;font-weight:800;}
+.cal-day.selected{background:var(--gold-400);color:#1a1204;font-weight:800;box-shadow:0 0 18px rgba(206,162,63,.45);}
 .cal-day.disabled{color:var(--white-faint);opacity:.25;}
 .cal-day.empty{visibility:hidden;}
 
@@ -349,7 +367,7 @@ html,body{overflow-x:hidden;width:100%;}
 
 /* tabs */
 .tabs{display:flex;background:var(--surface-flat);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:16px;}
-.tab{flex:1;text-align:center;padding:9px 0;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--white-faint);}
+.tab{flex:1;text-align:center;padding:9px 0;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--white-faint);background:transparent;border:none;}
 .tab.active{background:linear-gradient(135deg,var(--gold-300),var(--gold-600));color:#1a1204;}
 
 .empty-state{text-align:center;padding:50px 20px;color:var(--white-faint);}
@@ -405,11 +423,12 @@ html,body{overflow-x:hidden;width:100%;}
 
 /* ===================== ADMIN / BARBEIRO (compartilhado) ===================== */
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
-.stat-card{padding:14px;border-radius:14px;background:var(--surface);border:1px solid var(--border);}
+.stat-card{padding:14px;border-radius:14px;background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--border);}
 .stat-card .num{font-family:var(--font-display);font-size:24px;font-weight:800;color:var(--gold-400);}
 .stat-card .lbl{font-size:11px;color:var(--white-faint);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
 
-.appt-card{padding:13px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--border);margin-bottom:10px;}
+.appt-card{padding:13px 14px;border-radius:14px;background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--border);margin-bottom:10px;transition:transform .1s ease;}
+.appt-card:active{transform:scale(.98);}
 .appt-card .top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
 .appt-card .time{font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--gold-400);}
 .status-pill{font-size:10px;font-weight:700;text-transform:uppercase;padding:4px 9px;border-radius:20px;letter-spacing:.03em;}
